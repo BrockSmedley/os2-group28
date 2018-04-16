@@ -1,0 +1,134 @@
+\documentclass[10pt,a4paper]{report}
+\usepackage[latin1]{inputenc}
+\usepackage{amsmath}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{graphicx}
+\usepackage{listings}
+\usepackage{hyperref}
+
+\author{Samuel Reeve, Simon Bennett, Brock Smedley}
+\title{Homework Project 1: Getting Acquainted}
+\begin{document}
+	\maketitle
+	
+	\begin{abstract}
+		This write-up details the process we used to build the yocto kernel, run it on a qemu virtual machine, and remotely debug it. This report also includes answers to various questions about this process, as well as the version control log detailing the process.
+	\end{abstract}
+
+	\section*{Command Logs}
+	\subsection*{Setup}
+	\begin{lstlisting}
+# switch to csh -- seems to work where bash doesn't
+$ /bin/csh
+
+# build kernel
+$ setenv SRC_ROOT /scratch/spring2018/group28/linux-yocto-master
+$ cp $SRC_ROOT/../files/config-3.19.2-yocto-qemu $SRC_ROOT/.config
+$ cd $SRC_ROOT
+$ make
+
+# configure environment for qemu+csh
+$ cd /scratch/spring2018/group28/linux-yocto-master
+$ source ../files/environment-setup-i586-poky-linux.csh
+
+# set env. var. for file path to make things easy to read
+$ setenv FSRC "/scratch/spring2018/group28/files"		
+	\end{lstlisting}
+	
+	\subsection*{Run}
+	\begin{lstlisting}
+# run qemu
+$ qemu-system-i386 -gdb tcp::5528 -S -nographic \ 
+	-kernel $FSRC/bzImage-qemux86.bin \ 
+	-drive file=$FSRC/core-image-lsb-sdk-qemux86.ext4,if=virtio \ 
+	-enable-kvm -net none -usb -localtime --no-reboot \ 
+	--append "root=/dev/vda rw console=ttyS0 debug".
+
+### Execute these next commands in a NEW TERMINAL:
+$ gdb -tui
+# (now in the gdb shell)
+(gdb) target remote localhost:5528
+(gdb) q
+# say yes to the prompts
+
+### Back in the original terminal:
+# OS should be running and usable. 
+
+# To log in, use username root
+
+# To quit, run:
+$ shutdown -hP 0
+	\end{lstlisting}
+	
+	\newpage
+	\section*{Q\&A}
+	\textbf{1. What do you think the main point of this assignment is?}
+	
+		To familiarize us with building a custom kernel and running it in a virtual machine. In order to do kernel development, you to need to have a stable, controllable operating environment, which a virtual machine provides, as it is easier to virtualize than to try to deploy risky code on real hardware.
+	\\
+	\\
+	\textbf{2. How did you personally approach the problem? Design decisions, algorithm, etc.}
+	
+		We initially tried to follow the assignment instructions using the default bash shell but were unable to get it working. We determined that the environment script for bash does not work, but the tcsh/csh script does, so we switched to csh to continue. From there, it was simply a matter of following the course instructions.
+	\\
+	\\
+	\textbf{3. How did you ensure your solution was correct? Testing details, for instance.}
+	
+		As the task is simply to boot a VM with a compiled kernel, testing is simple: if it boots successfully inside a virtual machine, the process was a success.
+	\\
+	\\
+	\textbf{4. What did you learn?}
+	
+		We learned how to build a kernel, and how to deploy it into a virtual machine. We also learned about gdb?s tui and remote connection functionality.
+	
+	
+	\newpage
+	\section*{Flag explanations}
+	\texttt{-gdb tcp::5528} causes qemu to wait for a gdb connection, and open a gdbserver on TCP port 5528
+	\\
+	\texttt{-S} stops the CPU at startup.
+	\\	
+	\texttt{-nographic} disables the gui and displays qemu on the console instead.
+	\\	
+	\texttt{-kernel} specifies the file to use as the kernel image.
+	\\	
+	\texttt{-drive} specifies an image file to be used for a virtual hard drive.
+	\\	
+	\texttt{-enable-kvm} Enables Kernel Virtual Machine which provides various virtualization capabilities.
+	\\	
+	\texttt{-net none} disables qemu's default network backend.
+	\\	
+	\texttt{-usb} enables the usb driver.
+	\\	
+	\texttt{-localtime} sets the real time clock to localtime.
+	\\	
+	\texttt{--no-reboot} qemu exits instead of rebooting.
+	\\	
+	\texttt{-append} allows the command line to be used as the kernel command line.
+	
+	
+	\section*{Work log}
+	\begin{itemize}
+		\item Friday: Group met for an hour -- got stuck on using qemu and left to do individual research.
+		\item Saturday: The group members each gathered insights from their own sources and worked on running the qemu VM. Once the group got the VM running, Brock formalized the instructions in text and a shell script.
+		\item Sunday: Simon and Samuel filled in the gaps in the writeup, Brock converted our group Google Docs document to this TeX document.
+	\end{itemize}
+	
+	
+	\section*{Git Log}
+	\begin{tabular}{l l l}\textbf{Detail} & \textbf{Author} & \textbf{Description}\\\hline
+		\href{https://github.com/BrockSmedley/os2-group28/commit/90e6df08d30c3f5f048eb7be774877d1609e99e5}{90e6df08d} & Brock Smedley & Initial commit\\\hline
+		\href{https://github.com/BrockSmedley/os2-group28/commit/2eff0d0dc0c0d68fff787b5ed695fa87342f141a}{2eff0d0dc} & Brock Smedley & add files\\\hline
+		\href{https://github.com/BrockSmedley/os2-group28/commit/d8213579b7b48a53b9fcb572713e87c6d36c6dd4}{d8213579b} & Brock Smedley & log-to-tex script\\\hline
+	\end{tabular}
+		
+	
+	\newpage
+	\section*{Sources}
+	\begin{itemize}
+		\item https://qemu.weilnetz.de/doc/qemu-doc.html
+		\item https://linux.die.net/man/1/qemu-kvm
+	\end{itemize}
+	
+\end{document}
